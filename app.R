@@ -18,7 +18,6 @@ gene_info <- read.table(
   ,stringsAsFactors=F
 )
 
-
 network <- graph_from_data_frame(edgelist, directed=F, vertices=gene_info)
 V(network)$size <- V(network)$system_count * 10
 
