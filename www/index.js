@@ -1,5 +1,5 @@
 function easyLayout(graph_json) {
-  console.log(graph_json)
+  console.log(graph_json);
 
   var nodeLoadTransform = (function() {
     var idKey = Object.keys(graph_json.nodes[0])[0];
@@ -138,11 +138,32 @@ function easyLayout(graph_json) {
     graph.forEachNode(function(node) {
       var pos = layout.getNodePosition(node.id);
       // coords.value += node.id + "\t" + pos.x + "\t" + pos.y + "\n";
-      mydata.push({x: pos.x, y: pos.y});
+      mydata.push({ x: pos.x, y: pos.y });
     });
-    // Shiny.onInputChange("mydata", coords.value);
-    console.log(mydata);
+
     Shiny.setInputValue("mydata", mydata);
+  };
+
+  Shiny.addCustomMessageHandler("getLatestCoordinates", function(v) {
+    var mydata = [];
+    graph.forEachNode(function(node) {
+      var pos = layout.getNodePosition(node.id);
+      mydata.push({ x: pos.x, y: pos.y });
+    });
+
+    Shiny.setInputValue("mydata", mydata);
+  });
+
+  window.onbeforeunload = function(e) {
+    alert('hi');
+    var mydata = [];
+    graph.forEachNode(function(node) {
+      var pos = layout.getNodePosition(node.id);
+      mydata.push({ x: pos.x, y: pos.y });
+    });
+
+    Shiny.setInputValue("mydata", mydata);
+    return 1
   };
 
   //////////////////////////////////

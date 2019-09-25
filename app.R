@@ -30,18 +30,24 @@ graph_json <- jsonlite::toJSON(list(
 server <- function(input, output, session) {
   session$sendCustomMessage(type = "dataTransferredFromServer", graph_json)
   
+  session$onEnded(function() {
+    session$sendCustomMessage(type = "getLatestCoordinates", TRUE)
+  })
+
+  onStop(function() {
+    session$sendCustomMessage(type = "getLatestCoordinates", TRUE)
+  })
+  
   observeEvent(input$mydata, {
     if(!is.null(input$mydata)) stopApp(input$mydata)
   })
 }
 
-addResourcePath('vivagraph.min.js', 'C:/R/easylayout/www/vivagraph.min.js')
-addResourcePath('multiselect.js', 'C:/R/easylayout/www/multiselect.js')
-addResourcePath('index.js', 'C:/R/easylayout/www/index.js')
+addResourcePath('vivagraph.min.js', 'www/vivagraph.min.js')
+addResourcePath('multiselect.js', 'www/multiselect.js')
+addResourcePath('index.js', 'www/index.js')
 
-layout <- runApp(shinyApp(ui = htmlTemplate("www/index.html"), server)) %>% matrix(ncol=2,byrow=T)
+layout <- runApp(shinyApp(ui = htmlTemplate("www/index.html"), server))# %>% matrix(ncol=2,byrow=T)
 
 
 plot(network, layout = layout, vertex.size = 1, vertex.label = NA)
-
-
