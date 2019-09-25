@@ -134,36 +134,14 @@ function easyLayout(graph_json) {
 
   document.getElementById("get").onclick = function() {
     // coords.value = "";
-    var mydata = [];
+    var coordinates = [];
     graph.forEachNode(function(node) {
       var pos = layout.getNodePosition(node.id);
       // coords.value += node.id + "\t" + pos.x + "\t" + pos.y + "\n";
-      mydata.push({ x: pos.x, y: pos.y });
+      coordinates.push({ x: pos.x, y: pos.y });
     });
 
-    Shiny.setInputValue("mydata", mydata);
-  };
-
-  Shiny.addCustomMessageHandler("getLatestCoordinates", function(v) {
-    var mydata = [];
-    graph.forEachNode(function(node) {
-      var pos = layout.getNodePosition(node.id);
-      mydata.push({ x: pos.x, y: pos.y });
-    });
-
-    Shiny.setInputValue("mydata", mydata);
-  });
-
-  window.onbeforeunload = function(e) {
-    alert('hi');
-    var mydata = [];
-    graph.forEachNode(function(node) {
-      var pos = layout.getNodePosition(node.id);
-      mydata.push({ x: pos.x, y: pos.y });
-    });
-
-    Shiny.setInputValue("mydata", mydata);
-    return 1
+    Shiny.setInputValue("coordinates", coordinates);
   };
 
   //////////////////////////////////

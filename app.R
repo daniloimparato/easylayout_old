@@ -3,7 +3,7 @@ library(htmltools)
 library(magrittr)
 library(igraph)
 
-setwd("C:/R/easylayout/")
+setwd("~/R/easylayout/")
 
 edgelist <- read.table(
   "../neurotransmission/resultados/n6_edgelist.tsv"
@@ -20,7 +20,10 @@ gene_info <- read.table(
 
 
 network <- graph_from_data_frame(edgelist, directed=F, vertices=gene_info)
-V(network)$size <- V(network)$system_count * 3
+V(network)$size <- V(network)$system_count * 10
+
+# network <- GSE13904_tree$g
+# V(network)$size <- V(network)$nodeSize / 5
 
 graph_json <- jsonlite::toJSON(list(
   nodes = igraph::as_data_frame(network, "vertices")
@@ -29,17 +32,9 @@ graph_json <- jsonlite::toJSON(list(
 
 server <- function(input, output, session) {
   session$sendCustomMessage(type = "dataTransferredFromServer", graph_json)
-  
-  session$onEnded(function() {
-    session$sendCustomMessage(type = "getLatestCoordinates", TRUE)
-  })
 
-  onStop(function() {
-    session$sendCustomMessage(type = "getLatestCoordinates", TRUE)
-  })
-  
-  observeEvent(input$mydata, {
-    if(!is.null(input$mydata)) stopApp(input$mydata)
+  observeEvent(input$coordinates, {
+    if(!is.null(input$coordinates)) stopApp(input$coordinates)
   })
 }
 
@@ -47,7 +42,6 @@ addResourcePath('vivagraph.min.js', 'www/vivagraph.min.js')
 addResourcePath('multiselect.js', 'www/multiselect.js')
 addResourcePath('index.js', 'www/index.js')
 
-layout <- runApp(shinyApp(ui = htmlTemplate("www/index.html"), server))# %>% matrix(ncol=2,byrow=T)
+layout <- runGadget(shinyApp(ui = htmlTemplate("www/index.html"), server)) %>% matrix(ncol=2,byrow=T)
 
-
-plot(network, layout = layout, vertex.size = 1, vertex.label = NA)
+plot(as.undirected(network), layout = layout, vertex.size = 1, vertex.label = NA)
