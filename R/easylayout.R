@@ -23,7 +23,7 @@ easylayout <- function(graph, layout = NULL){
 
   shiny::addResourcePath("www", system.file("www", package="easylayout"))
 
-  layout <- shiny::runGadget(shiny::shinyApp(ui = shiny::htmlTemplate("inst/www/index.html"), server))
+  layout <- shiny::runGadget(shiny::shinyApp(ui = shiny::htmlTemplate(system.file("www/index.html", package="easylayout")), server))
 
   matrix(layout, ncol=2,byrow=T)
 }
