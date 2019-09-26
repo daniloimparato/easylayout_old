@@ -1,0 +1,227 @@
+##########
+## SETUP
+##########
+library(ggplot2)
+library(gridExtra)
+
+dynn.nodes <- function(file) {
+  clean.lines <- sub("node_a\tnode_b\tweight.*", "", readChar(file, file.info(file)$size))
+  read.table(text=clean.lines,header = T,sep = "\t",stringsAsFactors = F, comment.char = "")[,c("node_id","alias","x","y")]
+}
+dynn.edges <- function(file) {
+  txt <- readChar(file, file.info(file)$size)
+  txt <- regmatches(txt,regexpr("node_a\tnode_b\tweight.*",txt))
+  read.table(text=txt,header = T,sep = "\t",stringsAsFactors = F, comment.char = "")[,1:2]
+}
+darken <- function(color, intensity=0.5) rgb(t(col2rgb(color)*(1-intensity)/255))
+
+##############
+## MAIN DATA
+##############
+vertices <- read.table("resultados/complete_gene_info.tsv",header=T,sep="\t",stringsAsFactors = F,comment.char = "", quote="")
+
+###########
+## LAYOUT
+###########
+layout <- dynn.nodes("resultados/go_perox_network_rearranged.dynn")
+vertices <- merge(vertices,layout,by.x="stringId",by.y="alias")
+
+##########
+## PER68
+##########
+vertices[vertices[,"customName"]=="PER68","Root"] <- 0
+
+#############
+## NA ROOTS
+#############
+vertices[is.na(vertices[,"Root"]),"Root"] <- max(vertices[,"Root"], na.rm = T)
+
+############
+## ROTACAO
+############
+#flipping axis
+#vertices[,"x"] <- -vertices[,"x"]
+vertices[,"y"] <- -vertices[,"y"]
+
+#matriz temporaria
+rotation <- as.matrix(vertices[, c("x","y")])
+
+#matriz de rotacao
+angle <- 350*(pi/180)
+rotm <- matrix(c(cos(angle),sin(angle),-sin(angle),cos(angle)),ncol=2)
+
+#rotacao
+rotation <- t(rotm %*% (t(rotation)))
+
+vertices[, c("x","y")] <- rotation
+
+##########
+## EDGES
+##########
+edgelist <- dynn.edges("resultados/go_perox_network_rearranged.dynn")
+
+from <- vertices[match(edgelist[,1], vertices[,"node_id"]), c("x","y")]
+to <- vertices[match(edgelist[,2], vertices[,"node_id"]), c("x","y")]
+
+from[,"group"] <- 1:nrow(from)
+to[,"group"] <- 1:nrow(to)
+
+edge_coords <- rbind(from,to)
+
+###################
+## SHAPES & COLOR
+###################
+vertices[,"shape"] <- ifelse(vertices[,"annotation"]=="chemical","chemical","protein")
+vertices[,"root_char"] <- as.character(vertices[,"Root"])
+
+#####################
+## COMPLETE NETWORK
+#####################
+roots <- as.numeric(names(table(vertices[,"Root"])))
+root_color <- setNames(rainbow(length(roots), end=0.65),as.character(roots))
+
+frame_color <- setNames(darken(root_color,0.5),as.character(roots))
+
+resize <- 0.3
+
+pdf("plots/complete.pdf",width = 21*resize, height = 29.7*resize, onefile = F, useDingbats = F)
+    ggplot() +
+      geom_path(data = edge_coords, aes(x = x, y = y, group = group), color="#B3B3D94D") +
+      
+      geom_point(data = subset(vertices,shape=="protein"), aes(x=x, y=y, fill=root_char, color=root_char), size=4, shape=21, stroke=0.75) +
+      geom_point(data = subset(vertices,shape=="chemical"), aes(x=x, y=y), size=5, shape=17) +
+      
+      geom_text(data = vertices, aes(x=x, y=y, label=customName), vjust = 0, nudge_y = 5, size=2) +
+      
+      #scale_shape_manual(values = c(protein=21, chemical=17), guide=F) +
+      scale_fill_manual(values = root_color, guide=F) +
+      scale_color_manual(values = frame_color, guide=F) +
+      
+      coord_equal() +
+      theme_void()
+dev.off()
+
+
+####################
+## CLASSES NETWORK
+####################
+class_color <- c(
+   ciii_peroxidase = "#1565C0"
+  ,peroxidase      = "#1565C0"
+  ,thiol_redox     = "#d50000"
+  ,sod             = "#64DD17"
+  ,other           = "#FBC02D" 
+)
+
+frame_color <- setNames(darken(class_color,0.5),names(class_color))
+
+resize <- 0.3
+
+pdf("plots/classes.pdf",width = 21*resize, height = 29.7*resize, onefile = F, useDingbats = F)
+ggplot() +
+  geom_path(data = edge_coords, aes(x = x, y = y, group = group), color="#B3B3D94D") +
+  
+  geom_point(data = subset(vertices,shape=="protein"), aes(x=x, y=y, fill=class, color=class), size=4, shape=21, stroke=0.75) +
+  geom_point(data = subset(vertices,shape=="chemical"), aes(x=x, y=y), size=5, shape=17) +
+  
+  geom_text(data = vertices, aes(x=x, y=y, label=customName), vjust = 0, nudge_y = 5, size=2) +
+  
+  #scale_shape_manual(values = c(protein=21, chemical=17), guide=F) +
+  scale_fill_manual(values = class_color, guide=F) +
+  scale_color_manual(values = frame_color, guide=F) +
+  
+  coord_equal() +
+  theme_void()
+dev.off()
+
+
+###############
+## PLANT ONLY
+###############
+roots <- as.numeric(names(table(vertices[,"Root"])))
+roots <- roots[roots <= 9]
+
+root_color <- setNames(rainbow(length(roots), end=0.65),as.character(roots))
+frame_color <- setNames(darken(root_color,0.5),as.character(roots))
+
+resize <- 0.3
+
+plant_genes <- subset(vertices,shape=="protein" & Root <= 9)
+past_genes <- subset(vertices,shape=="protein" & Root > 9)
+chemicals <- subset(vertices,shape=="chemical")
+
+pdf("plots/plants.pdf",width = 21*resize, height = 29.7*resize, onefile = F, useDingbats = F)
+ggplot() +
+  geom_path(data = edge_coords, aes(x = x, y = y, group = group), color="#B3B3D94D") +
+  
+  geom_point(data = plant_genes, aes(x=x, y=y, fill=root_char, color=root_char), size=4, shape=21, stroke=0.75) +
+  geom_point(data = past_genes, aes(x=x, y=y), size=4, shape=21, fill="#ffffff", color="#808080", stroke=0.75) +
+  geom_point(data = chemicals, aes(x=x, y=y), size=5, shape=17) +
+  
+  geom_text(data = plant_genes, aes(x=x, y=y, label=customName), vjust = 0, nudge_y = 5, size=2) +
+  geom_text(data = chemicals, aes(x=x, y=y, label=customName), vjust = 0, nudge_y = 5, size=2) +
+  
+  #scale_shape_manual(values = c(protein=21, chemical=17), guide=F) +
+  scale_fill_manual(values = root_color, guide=F) +
+  scale_color_manual(values = frame_color, guide=F) +
+  
+  coord_equal() +
+  theme_void()
+dev.off()
+  
+########################
+## differential NETWORK
+########################
+roots <- as.numeric(names(table(vertices[,"Root"])))
+root_color <- setNames(rainbow(length(roots), end=0.65),as.character(roots))
+
+frame_color <- setNames(darken(root_color,0.5),as.character(roots))
+
+xb <- range(vertices[,"x"])
+yb <- range(vertices[,"y"])
+
+diferenciais <- list()
+for(i in roots){
+  #finding which genes should be drawn
+  current_genes <- subset(vertices, Root == i & shape!="chemical")
+  past_genes <- subset(vertices, Root > i & shape!="chemical")
+  
+  chemicals <- subset(vertices,shape=="chemical")
+  
+  #finding which edges should be drawn
+  partial_ids <- c(current_genes[,"node_id"], past_genes[,"node_id"], chemicals[,"node_id"])
+  which_edges <- which(apply(edgelist, 1, function(r) any(!r %in% partial_ids)))
+  partial_edges <- edge_coords[!edge_coords[,"group"] %in% which_edges,]
+  
+  p <- ggplot()
+  p <- p + geom_path(data = partial_edges, aes(x = x, y = y, group = group), colour = "#B3B3D94D")
+  
+  p <- p + geom_point(data = past_genes, aes(x=x, y=y),shape=21, stroke=0.25, size=5, fill = "#ffffff", color="#808080")
+  p <- p + geom_point(data = current_genes, aes(x=x, y=y),shape=21, stroke=0.25, size=5, fill = root_color[as.character(i)])
+  p <- p + geom_point(data = chemicals, aes(x=x, y=y), shape=17, size=5.5)
+  
+  p <- p + geom_text(data = current_genes, aes(x=x, y=y, label=customName), vjust = 0, nudge_y = 6, size=3, alpha=0.8)
+  p <- p + geom_text(data = chemicals, aes(x=x, y=y, label=customName), vjust = 0, nudge_y = 6, size=3, alpha=0.8)
+  
+  p <- p + scale_shape_manual(values = c(protein=21, chemical=17), guide=F)
+    
+  p <- p + ggtitle(paste("Root",i))
+  p <- p + coord_equal()
+  p <- p + theme_void()
+  #p <- p + theme(plot.title = element_text(hjust = 0.5), plot.margin=unit(c(1,0,0,0),"cm"))
+  
+  #fixing boundaries
+  p <- p + scale_x_continuous(limits = xb)
+  p <- p + scale_y_continuous(limits = yb)
+  
+  #storing
+  plot_name <- paste0("plots/diferencial_",i,".pdf")
+  diferenciais[[plot_name]] <- p
+}
+#saving pdfs
+#invisible(mapply(ggsave, file=names(diferenciais), plot=diferenciais, width=14, height=12, onefile = F, useDingbats=FALSE))
+resize <- 1.25
+#pdf("plots/grid.pdf",width = 29.7*resize, height = 21*resize, onefile = F, useDingbats = F)
+pdf("plots/grid.pdf",width = 21*resize, height = 29.7*resize, onefile = F, useDingbats = F)
+  do.call(grid.arrange, c(rev(diferenciais), ncol=4))
+dev.off()

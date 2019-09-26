@@ -1,0 +1,40 @@
+library(rvest)
+
+url <- paste0(
+ 'http://peroxibase.toulouse.inra.fr/tools/search.php'
+,'?queries[]=Organism++does++contain++Marchantia+polymorpha'
+,'&queries[]=Class++does++contain++iii'
+,'&rm0=on'
+,'&rm1=on'
+,'&page_=0'
+)
+
+main <- url %>% read_html %>% html_node('#table_results') %>% html_table %>% na.omit
+
+main[,"Orthogroup"] <- sapply(main[,"Id"], function(id){
+  Sys.sleep(1)
+  paste0("http://peroxibase.toulouse.inra.fr/browse/process/view_perox.php?id=",id) %>%
+  read_html %>%
+  html_node('a[href^="view_orthogroup.php?orthogroup="]') %>%
+  html_text
+})
+
+main <- main[,c("Id","Name","Orthogroup")]
+
+orthogroups <- unique(subset(main, !is.na(Orthogroup), Orthogroup, drop = T))
+
+orthogroups <- lapply(orthogroups, function(og){
+  Sys.sleep(1)
+  p <- paste0("http://peroxibase.toulouse.inra.fr/browse/process/view_orthogroup.php?orthogroup=",og) %>%
+       read_html %>%
+       html_node('#table_results') %>%
+       html_table
+  p[,"Orthogroup"] <- og
+  p[,c("Id","Name","Organism","Orthogroup")]
+})
+
+orthogroups <- do.call(rbind, orthogroups)
+
+write.table(main,"protein_to_orthogroup.tsv",sep="\t",quote=F,col.names = T,row.names = F)
+write.table(orthogroups,"orthogroups_proteins.tsv",sep="\t",quote=F,col.names = T,row.names = F)
+

@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1569475683792.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "AE468785",
+    "lastKnownWriteTime" : 1569479317,
+    "last_content_update" : 1569479317426,
+    "path" : "C:/R/easylayout/demo/demo_string.R",
+    "project_path" : "demo/demo_string.R",
+    "properties" : {
+        "cursorPosition" : "26,36",
+        "scrollLine" : "2",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

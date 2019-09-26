@@ -1,0 +1,140 @@
+---
+title: "interações STRING/STITCH"
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "notebooks") })
+output:
+  html_document:
+    df_print: paged
+    theme: default
+    highlight: espresso
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: true
+---
+# Objetivo
+Coletar e filtrar as interações PPI dos genes obtidos via STRING/STITCH.
+```{r}
+#funcao combinescores
+#nscore,fscore,pscore,ascore,escore,dscore,tscore
+combinescores <- function(string_interactions, sources){
+  cs <- 1-string_interactions[,sources, drop=F]
+  cs <- apply(X = cs, MARGIN = 1, FUN = function(x) 1-prod(x))
+  return(cs)
+}
+dynn.nodes <- function(file) {
+  clean.lines <- sub("node_a\tnode_b\tweight.*", "", readChar(file, file.info(file)$size))
+  read.table(text=clean.lines,header = T,sep = "\t",stringsAsFactors = F, comment.char = "")[,c("node_id","alias","x","y")]
+}
+dynn.edges <- function(file) {
+  txt <- readChar(file, file.info(file)$size)
+  txt <- regmatches(txt,regexpr("node_a\tnode_b\tweight.*",txt))
+  read.table(text=txt,header = T,sep = "\t",stringsAsFactors = F, comment.char = "")[,1:2]
+}
+```
+
+# STRING
+## REDE
+### STRING
+Baixamos a tabela de interações pela API do string
+```{r rows.print=5}
+string_network <- read.table(
+  "data/string_interactions.tsv"
+  ,sep = "\t"
+  ,header = T
+  ,stringsAsFactors = F
+)
+string_network
+```
+
+### STITCH
+Baixamos a tabela de interações pela API do string
+```{r rows.print=5}
+stitch_network <- read.table(
+  "data/stitch_interactions.tsv"
+  ,sep = "\t"
+  ,header = T
+  ,stringsAsFactors = F
+)
+
+stitch_network
+```
+
+## Scores
+### CS
+Recalculamos o combinedscore apenas com as colunas `escore` (experimental) e `dscore` (database)
+```{r rows.print=5}
+channels <- c("experimentally_determined_interaction","database_annotated")
+string_network[,"cs"] <- combinescores(string_network,channels)
+string_network <- string_network[,c("node1_external_id","node2_external_id","cs")]
+
+#subset confidencia >= 0.7
+string_network <- string_network[string_network[,"cs"] >= 0.4, c("node1_external_id","node2_external_id")]
+string_network
+```
+
+### STITCH
+Recalculamos o combinedscore apenas com as colunas `escore` (experimental) e `dscore` (database)
+```{r rows.print=5}
+channels <- c("experimentally_determined_interaction","database_annotated")
+stitch_network[,"cs"] <- combinescores(stitch_network,channels)
+stitch_network <- stitch_network[,c("node1_external_id","node2_external_id","cs")]
+
+#subset confidencia >= 0.7
+stitch_network <- stitch_network[stitch_network[,"cs"] >= 0.4, c("node1_external_id","node2_external_id")]
+stitch_network
+```
+
+# igraph
+Escrevemos a edgelist obtida em `n6_edgelist.tsv`
+```{r}
+library(igraph)
+library(RedeR)
+
+#vertices_info foi criada a partir dos arquivos dedupados
+vertices <- read.table("resultados/complete_gene_info.tsv",header=T,sep="\t",stringsAsFactors = F,comment.char = "", quote="")
+
+#vertices <- merge(vertices,layout,by.x="stringId",by.y="alias")
+
+vertices <- vertices[,-1]
+
+edgelist <- rbind(string_network, stitch_network)
+edgelist <- unique(edgelist)
+
+g <- graph_from_data_frame(edgelist, directed=F,vertices = vertices)
+g <- simplify(g)
+
+write.table(as_edgelist(g),"resultados/complete_edgelist.tsv",sep="\t",col.names = F, row.names = F, quote = F)
+#V(g)$name <- V(g)$preferredName
+
+#separando componentes
+subgraphs <- decompose.graph(g)
+#lcc = largest connected component
+lcc <- subgraphs[[which.max(sapply(subgraphs,vcount))]]
+
+#not in lcc
+ids_not_in_lcc <- V(g)$id[!V(g)$id %in% V(lcc)$id]
+not_in_lcc <- vertices[vertices$stringId %in% ids_not_in_lcc,]
+write.table(not_in_lcc,"resultados/not_in_lcc.tsv",sep="\t",col.names = T, row.names = F, quote = F)
+
+ids_in_lcc <- V(g)$id[V(g)$id %in% V(lcc)$id]
+in_lcc <- vertices[vertices$stringId %in% ids_in_lcc,]
+write.table(in_lcc,"resultados/in_lcc.tsv",sep="\t",col.names = T, row.names = F, quote = F)
+```
+
+# RedeR
+```{r}
+rdp <- RedPort()
+calld(rdp)
+
+layout <- dynn.nodes("resultados/go_perox_network2.dynn")
+
+l <- as.matrix(layout[match(V(lcc)$name,layout[,"alias"]),c("x","y")])
+
+lcc <- att.setv(g=lcc, from="Root", to='nodeColor')
+
+V(lcc)$nodeSize <- 10
+
+addGraph(rdp, lcc, gcoord=c(40,40), gscale=15, isNest=F, theme='tm1', zoom=25, layout=l)
+```
+
