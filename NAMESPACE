@@ -1,0 +1,4 @@
+exportPattern("^[[:alpha:]]+")
+importFrom(igraph,as_data_frame)
+importFrom(jsonlite,toJSON)
+importFrom(shiny)
