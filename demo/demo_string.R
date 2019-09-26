@@ -1,4 +1,4 @@
-devtools::install_github("daniloimparato/easylayout")
+devtools::install_github("daniloimparato/easylayout", force=T)
 
 library(easylayout)
 library(igraph)

@@ -17,9 +17,11 @@ easylayout <- function(graph, layout = NULL){
     })
   }
 
-  shiny::addResourcePath('vivagraph.min.js', 'inst/www/vivagraph.min.js')
-  shiny::addResourcePath('multiselect.js', 'inst/www/multiselect.js')
-  shiny::addResourcePath('index.js', 'inst/www/index.js')
+  # shiny::addResourcePath('vivagraph.min.js', 'inst/www/vivagraph.min.js')
+  # shiny::addResourcePath('multiselect.js', 'inst/www/multiselect.js')
+  # shiny::addResourcePath('index.js', 'inst/www/index.js')
+
+  shiny::addResourcePath("www", system.file("www", package="easylayout"))
 
   layout <- shiny::runGadget(shiny::shinyApp(ui = shiny::htmlTemplate("inst/www/index.html"), server))
 
