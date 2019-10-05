@@ -15,18 +15,18 @@ string_interactions <- read.table(
 
 g <- graph_from_data_frame(string_interactions, directed=F)
 
-V(g)$degree <- degree(g)
+V(g)$size <- degree(g)
 
 layout <- easylayout(g)
 
 ggraph(g, layout = layout) +
   geom_edge_link(color="#999999") +
-  geom_node_point(aes(color = degree, size = degree)) +
+  geom_node_point(aes(color = size, size = size)) +
   theme_void()
 
 layout_novo <- easylayout(g, layout)
 
 ggraph(g, layout = layout_novo) +
   geom_edge_link(color="#999999") +
-  geom_node_point(aes(color = degree, size = degree)) +
+  geom_node_point(aes(color = size, size = size)) +
   theme_void()
