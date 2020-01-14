@@ -55,7 +55,7 @@ function easyLayout(graph_json) {
 
     if (node.data.size)
       return Viva.Graph.View.webglSquare(node.data.size, color);
-      
+
     else return Viva.Graph.View.webglSquare(5, color);
 
   });
@@ -63,7 +63,8 @@ function easyLayout(graph_json) {
   var renderer = Viva.Graph.View.renderer(graph, {
     container: document.getElementById("graph-container"),
     graphics: graphics,
-    layout: layout
+    layout: layout,
+    prerender: true
   });
 
   var events = Viva.Graph.webglInputEvents(graphics, graph);
@@ -115,7 +116,8 @@ function easyLayout(graph_json) {
       });
     });
 
-  renderer.run();
+    renderer.run();
+    renderer.pause();
 
   //////////////////////////////////
   // force layout controls
@@ -136,7 +138,10 @@ function easyLayout(graph_json) {
   };
 
   document.getElementById("run").onchange = function() {
-    if (this.checked) renderer.resume();
+    if (this.checked) {
+      // renderer.run();
+      renderer.resume();
+    }
     else renderer.pause();
   };
 
