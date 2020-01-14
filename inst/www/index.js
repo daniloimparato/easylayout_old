@@ -55,6 +55,7 @@ function easyLayout(graph_json) {
 
     if (node.data.size)
       return Viva.Graph.View.webglSquare(node.data.size, color);
+      
     else return Viva.Graph.View.webglSquare(5, color);
 
   });
