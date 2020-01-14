@@ -47,9 +47,16 @@ function easyLayout(graph_json) {
   var graphics = Viva.Graph.View.webglGraphics();
 
   graphics.node(function(node) {
+
+    var color = "#000000"
+
+    if (node.data.color)
+      color = node.data.color
+
     if (node.data.size)
-      return Viva.Graph.View.webglSquare(node.data.size, "#000000");
-    else return Viva.Graph.View.webglSquare(5, "#000000");
+      return Viva.Graph.View.webglSquare(node.data.size, color);
+    else return Viva.Graph.View.webglSquare(5, color);
+
   });
 
   var renderer = Viva.Graph.View.renderer(graph, {
