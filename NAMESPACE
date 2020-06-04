@@ -1,6 +1,8 @@
 exportPattern("^[[:alpha:]]+")
 
 importFrom(magrittr,"%>%")
+importFrom(magrittr,"%<>%")
+
 importFrom(dplyr, select_if)
 importFrom(dplyr, bind_rows)
 

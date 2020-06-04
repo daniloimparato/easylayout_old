@@ -11,7 +11,7 @@ vivagraph <- function(
   ,pinned_cols             = 2
   ,pinned_rows             = "auto"
   ,pinned_size_multiplier  = 20
-  ,lcc_margin_left         = "auto"
+  ,lcc_margin_left         = 300
 ){
 
   if(is.null(igraph::V(graph)$name)){
@@ -56,11 +56,6 @@ vivagraph <- function(
   if(is.matrix(layout)){
     igraph::V(graph)$x <- layout[,1]
     igraph::V(graph)$y <- layout[,2]
-
-    if(lcc_margin_left == "auto") {
-      lcc_width <- layout[,1] %>% range %>% diff
-      lcc_margin_left <- lcc_width + 0.1 * lcc_width
-    }
   }
 
   # Lay unconnected nodes on grid
@@ -72,11 +67,6 @@ vivagraph <- function(
     if(all(unconnected_nodes %>% dim) != 0 & all(unconnected_edges %>% dim) != 0){
       unconnected_graph  <- igraph::graph_from_data_frame(unconnected_edges, directed = F, vertices = unconnected_nodes)
       unconnected_layout <- igraph::layout_on_grid(unconnected_graph, width = pinned_cols, height = pinned_rows) * pinned_size_multiplier
-
-      if(lcc_margin_left == "auto") {
-        grid_width <- unconnected_layout[,1] %>% range %>% diff
-        lcc_margin_left <- grid_width + 0.5 * grid_width
-      }
 
       igraph::V(graph)[igraph::V(unconnected_graph)$name]$x <- unconnected_layout[,1] - lcc_margin_left
       igraph::V(graph)[igraph::V(unconnected_graph)$name]$y <- unconnected_layout[,2]
