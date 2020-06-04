@@ -2,70 +2,83 @@ rescale <- function(x, from, to) approxfun(range(x), c(from, to))(x)
 
 #' @export
 vivagraph <- function(
-  graph,
-  layout                  = NULL,
-  precompute_iterations   = 1000,
-  initial_size_multiplier = 75,
-  pin_nodes               = FALSE,
-  pinned_cols             = 2,
-  pinned_rows             = 0,
-  lcc_margin_left         = 300
+   graph
+  ,layout                  = NULL
+  ,precompute_iterations   = 1000
+  ,initial_size_multiplier = 75
+  ,pin_nodes               = FALSE
+  ,pin_threshold           = 4
+  ,pinned_cols             = 2
+  ,pinned_rows             = "auto"
+  ,pinned_size_multiplier  = 20
+  ,lcc_margin_left         = "auto"
 ){
 
   if(is.null(igraph::V(graph)$name)){
     V(graph)$name <- 1:igraph::vcount(graph)
   }
-  subgraphs <- igraph::decompose.graph(graph)
-  lcc_index <- which.max(sapply(subgraphs, vcount))
+
+  if(pinned_rows == "auto") {
+    pinned_rows <- 0
+  }
+
+  subgraphs        <- igraph::decompose.graph(graph)
+  subgraphs_to_pin <- sapply(subgraphs, vcount) <= pin_threshold
 
   # Magic precomputing
   vertices <- igraph::as_data_frame(graph, "vertices")
+  numeric_columns <- vertices %>% dplyr::select(-name) %>% dplyr::select_if(is.numeric)
 
-  if(all(vertices %>% dim) != 0){
+  if(all(numeric_columns %>% dim) != 0){
 
-    numeric_columns <- vertices %>% dplyr::select(-name) %>% dplyr::select_if(is.numeric)
+    g_v <- numeric_columns %>%
+      apply(2, rescale, from = 0.001, to = 1) %>%
+      dist %>%
+      as.matrix
 
-    if(all(numeric_columns %>% dim) != 0){
+    g_v <- 1/g_v^2
 
-      g_v <- numeric_columns %>%
-        apply(2, rescale, from = 0.001, to = 1) %>%
-        dist %>%
-        as.matrix
+    g_v[g_v == Inf] <- max(g_v[g_v != max(g_v)])
+    # g_v[g_v <= 1] <- 0
 
-      g_v <- 1/g_v^2
+    row.names(g_v) <- igraph::V(graph)$name
+    colnames(g_v)  <- igraph::V(graph)$name
 
-      g_v[g_v == Inf] <- max(g_v[g_v != max(g_v)])
-      # g_v[g_v <= 1] <- 0
+    dist_graph <- igraph::graph_from_adjacency_matrix(g_v, mode = "undirected", weighted = TRUE, diag = FALSE)
 
-      row.names(g_v) <- igraph::V(graph)$name
-      colnames(g_v)  <- igraph::V(graph)$name
+    dist_layout <- igraph::layout_with_fr(dist_graph, niter = precompute_iterations) * initial_size_multiplier
 
-      dist_graph <- igraph::graph_from_adjacency_matrix(g_v, mode = "undirected", weighted = TRUE, diag = FALSE)
+    V(graph)$x <- dist_layout[,1]
+    V(graph)$y <- dist_layout[,2]
 
-      dist_layout <- igraph::layout_with_fr(dist_graph, niter = precompute_iterations) * initial_size_multiplier
-
-      V(graph)$x <- dist_layout[,1] + lcc_margin_left
-      V(graph)$y <- dist_layout[,2]
-
-    }
   }
 
   if(is.matrix(layout)){
     igraph::V(graph)$x <- layout[,1]
     igraph::V(graph)$y <- layout[,2]
+
+    if(lcc_margin_left == "auto") {
+      lcc_width <- layout[,1] %>% range %>% diff
+      lcc_margin_left <- lcc_width + 0.1 * lcc_width
+    }
   }
 
   # Lay unconnected nodes on grid
   if(pin_nodes == TRUE) {
 
-    unconnected_nodes <- lapply(subgraphs[-lcc_index], igraph::as_data_frame, what = "vertices") %>% dplyr::bind_rows()
-    unconnected_edges <- lapply(subgraphs[-lcc_index], igraph::as_data_frame, what = "edges") %>% dplyr::bind_rows()
+    unconnected_nodes <- lapply(subgraphs[subgraphs_to_pin], igraph::as_data_frame, what = "vertices") %>% dplyr::bind_rows()
+    unconnected_edges <- lapply(subgraphs[subgraphs_to_pin], igraph::as_data_frame, what = "edges") %>% dplyr::bind_rows()
 
     if(all(unconnected_nodes %>% dim) != 0 & all(unconnected_edges %>% dim) != 0){
       unconnected_graph  <- igraph::graph_from_data_frame(unconnected_edges, directed = F, vertices = unconnected_nodes)
-      unconnected_layout <- igraph::layout_on_grid(unconnected_graph, width = pinned_cols, height = pinned_rows) * 20
+      unconnected_layout <- igraph::layout_on_grid(unconnected_graph, width = pinned_cols, height = pinned_rows) * pinned_size_multiplier
 
-      igraph::V(graph)[igraph::V(unconnected_graph)$name]$x <- unconnected_layout[,1]
+      if(lcc_margin_left == "auto") {
+        grid_width <- unconnected_layout[,1] %>% range %>% diff
+        lcc_margin_left <- grid_width + 0.5 * grid_width
+      }
+
+      igraph::V(graph)[igraph::V(unconnected_graph)$name]$x <- unconnected_layout[,1] - lcc_margin_left
       igraph::V(graph)[igraph::V(unconnected_graph)$name]$y <- unconnected_layout[,2]
       igraph::V(graph)[igraph::V(unconnected_graph)$name]$pinned <- 1
     }
