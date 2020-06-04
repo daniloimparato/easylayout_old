@@ -38,10 +38,22 @@ function easyLayout(graph_json) {
     timeStep: 5 //20
   });
 
+  var pinned_node_count = 0;
+
   graph.forEachNode(function(node) {
-    if (node.data.x) layout.setNodePosition(node.id, node.data.x, node.data.y);
-    else
+
+    if ("x" in node.data){
+      layout.setNodePosition(node.id, node.data.x, node.data.y);
+      // console.log(`set node "${node.id}" position at x = ${node.data.x} and y = ${node.data.y}`);
+    } else {
       layout.setNodePosition(node.id, Math.random() * 500, Math.random() * 500);
+    }
+
+    if(node.data.pinned){
+      layout.pinNode(node, true);
+      console.log(`${pinned_node_count++}. pinned node "${node.id}" position at x = ${node.data.x} and y = ${node.data.y}`);
+    }
+
   });
 
   var graphics = Viva.Graph.View.webglGraphics();
