@@ -102,7 +102,11 @@ vivagraph <- function(
 
   layout <- shiny::runGadget(shiny::shinyApp(ui = shiny::htmlTemplate(system.file("www/index.html", package = "easylayout")), server))
 
-  matrix(layout, ncol = 2, byrow = TRUE)
+  layout <- matrix(layout, ncol = 2, byrow = TRUE)
+
+  layout[,2] <- -1 * layout[,2]
+
+  layout
 }
 
 #' @export
