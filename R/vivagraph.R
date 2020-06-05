@@ -1,5 +1,30 @@
 rescale <- function(x, from, to) approxfun(range(x), c(from, to))(x)
 
+#' Vivagraph force layout
+#'
+#' Spawns a shiny app that generates a layout matrix with node coordinates
+#'
+#' @param graph igraph object
+#' @param layout optional initial layout
+#' @param precompute_iterations number of iterations for the magic precomputing step
+#' @param initial_size_multiplier the precomputed layout size multiplier
+#' @param pin_nodes whether to pin unconnected nodes to a grid
+#' @param pin_threshold pin components with node count <= this number
+#' @param pinned_cols number of columns to pin unconnected nodes
+#' @param pinned_rows number of rows to pin unconnected nodes
+#' @param pinned_size_multiplier pinned grid size
+#' @param lcc_margin_left distance between the pinned grid and other nodes
+#'
+#' @return A 2 column layout matrix with node coordinates
+#'
+#' @examples
+#' g <- igraph::erdos.renyi.game(n = 5000, p.or.m = 10000, type = "gnm")
+#'
+#' layout <- easylayout::vivagraph(g, pin_nodes = FALSE)
+#' layout <- easylayout::vivagraph(g, layout = layout, pin_nodes = TRUE, pinned_cols = 10, lcc_margin_left = 500)
+#'
+#' plot(g, layout = layout, vertex.size = 1, vertex.label = NA)
+#'
 #' @export
 vivagraph <- function(
    graph
