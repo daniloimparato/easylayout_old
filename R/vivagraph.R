@@ -50,7 +50,7 @@ vivagraph <- function(
   }
 
   subgraphs        <- igraph::decompose.graph(graph)
-  subgraphs_to_pin <- sapply(subgraphs, vcount) <= pin_threshold
+  subgraphs_to_pin <- sapply(subgraphs, igraph::vcount) <= pin_threshold
 
   # Magic precomputing
   vertices <- igraph::as_data_frame(graph, "vertices")
