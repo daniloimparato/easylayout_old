@@ -1,5 +1,7 @@
 rescale <- function(x, from, to) approxfun(range(x), c(from, to))(x)
 
+has_at_least_two_values <- function(x) length(unique(x)) > 1
+
 #' Vivagraph force layout
 #'
 #' Spawns a shiny app that generates a layout matrix with node coordinates
@@ -52,7 +54,10 @@ vivagraph <- function(
 
   # Magic precomputing
   vertices <- igraph::as_data_frame(graph, "vertices")
-  numeric_columns <- vertices %>% dplyr::select(-name) %>% dplyr::select_if(is.numeric)
+  numeric_columns <- vertices %>%
+    dplyr::select(-name) %>%
+    dplyr::select_if(is.numeric) %>%
+    dplyr::select_if(has_at_least_two_values)
 
   if(all(numeric_columns %>% dim) != 0){
 
