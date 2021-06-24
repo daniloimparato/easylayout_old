@@ -10,7 +10,7 @@ vivagraph(
   precompute_iterations = 1000,
   initial_size_multiplier = 75,
   pin_nodes = FALSE,
-  pin_threshold = 4,
+  pin_threshold = Inf,
   pinned_cols = 2,
   pinned_rows = "auto",
   pinned_size_multiplier = 20,

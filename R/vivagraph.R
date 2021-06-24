@@ -34,7 +34,7 @@ vivagraph <- function(
   ,precompute_iterations   = 1000
   ,initial_size_multiplier = 75
   ,pin_nodes               = FALSE
-  ,pin_threshold           = 4
+  ,pin_threshold           = 10
   ,pinned_cols             = 2
   ,pinned_rows             = "auto"
   ,pinned_size_multiplier  = 20
@@ -48,9 +48,6 @@ vivagraph <- function(
   if(pinned_rows == "auto") {
     pinned_rows <- 0
   }
-
-  subgraphs        <- igraph::decompose.graph(graph)
-  subgraphs_to_pin <- sapply(subgraphs, igraph::vcount) <= pin_threshold
 
   # Magic precomputing
   vertices <- igraph::as_data_frame(graph, "vertices")
@@ -88,20 +85,40 @@ vivagraph <- function(
     igraph::V(graph)$y <- layout[,2]
   }
 
+  subgraphs        <- igraph::decompose.graph(graph)
+  subgraphs_to_pin <- sapply(subgraphs, igraph::vcount) <= pin_threshold
+  lcc              <- igraph::disjoint_union(subgraphs[-subgraphs_to_pin])
+  # lcc <- subgraphs[[which.max(sapply(subgraphs,vcount))]]
+
+  print(subgraphs)
+  print(subgraphs_to_pin)
+  print(lcc)
+
   # Lay unconnected nodes on grid
   if(pin_nodes == TRUE) {
 
-    unconnected_nodes <- lapply(subgraphs[subgraphs_to_pin], igraph::as_data_frame, what = "vertices") %>% dplyr::bind_rows()
-    unconnected_edges <- lapply(subgraphs[subgraphs_to_pin], igraph::as_data_frame, what = "edges") %>% dplyr::bind_rows()
+    # unconnected_nodes <- lapply(subgraphs[subgraphs_to_pin], igraph::as_data_frame, what = "vertices") %>% dplyr::bind_rows()
+    # unconnected_edges <- lapply(subgraphs[subgraphs_to_pin], igraph::as_data_frame, what = "edges") %>% dplyr::bind_rows()
 
-    if(all(unconnected_nodes %>% dim) != 0 & all(unconnected_edges %>% dim) != 0){
-      unconnected_graph  <- igraph::graph_from_data_frame(unconnected_edges, directed = F, vertices = unconnected_nodes)
-      unconnected_layout <- igraph::layout_on_grid(unconnected_graph, width = pinned_cols, height = pinned_rows) * pinned_size_multiplier
+    unconnected_components <- igraph::disjoint_union(subgraphs[subgraphs_to_pin]) %>% igraph::add_layout_(igraph::nicely(), component_wise())
 
-      igraph::V(graph)[igraph::V(unconnected_graph)$name]$x <- unconnected_layout[,1] - lcc_margin_left
-      igraph::V(graph)[igraph::V(unconnected_graph)$name]$y <- unconnected_layout[,2]
-      igraph::V(graph)[igraph::V(unconnected_graph)$name]$pinned <- 1
-    }
+    # if(all(unconnected_nodes %>% dim) != 0 & all(unconnected_edges %>% dim) != 0){
+    #   unconnected_graph  <- igraph::graph_from_data_frame(unconnected_edges, directed = F, vertices = unconnected_nodes)
+    #   unconnected_layout <- igraph::layout_on_grid(unconnected_graph, width = pinned_cols, height = pinned_rows) * pinned_size_multiplier
+    #
+    #   igraph::V(graph)[igraph::V(unconnected_graph)$name]$x <- unconnected_layout[,1] - lcc_margin_left
+    #   igraph::V(graph)[igraph::V(unconnected_graph)$name]$y <- unconnected_layout[,2]
+    #   igraph::V(graph)[igraph::V(unconnected_graph)$name]$pinned <- 1
+    # }
+
+    # if(igraph::vcount(unconnected_components) > 0){
+    combined_layout <- igraph::merge_coords(list(lcc, unconnected_components), list(matrix(c(igraph::V(lcc)$x, igraph::V(lcc)$y), ncol=2), unconnected_components$layout))
+    graph <- igraph::disjoint_union(list(lcc, unconnected_components))
+    print(igraph::V(lcc))
+    print(igraph::V(unconnected_components))
+    igraph::V(graph)$x <- combined_layout[,1]
+    igraph::V(graph)$y <- combined_layout[,2]
+    # }
   }
 
   # Shiny stuff ---------------------
